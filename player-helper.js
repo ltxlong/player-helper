@@ -3,8 +3,8 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.0.0
 // @description  观影助手
-// @author       AI
-// @match        *://*/*
+// @match        *://linux.do/*
+// @match        *://idcflare.com/*  
 // @grant        GM_addStyle
 // @require      https://unpkg.com/jquery@3.7.1/dist/jquery.js
 // @require      https://cdn.tailwindcss.com
