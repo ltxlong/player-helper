@@ -10,6 +10,7 @@
 // @require      https://cdn.tailwindcss.com
 // @require      https://cdn.jsdelivr.net/npm/sweetalert2@11
 // @require      https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js
+// @license      MIT
 // @run-at       document-end
 // ==/UserScript==
 
