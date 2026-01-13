@@ -5,6 +5,7 @@
 // @description  观影助手
 // @match        *://linux.do/*
 // @match        *://idcflare.com/*  
+// @match        https://*.bing.com/*
 // @grant        GM_addStyle
 // @require      https://unpkg.com/jquery@3.7.1/dist/jquery.js
 // @require      https://cdn.tailwindcss.com
