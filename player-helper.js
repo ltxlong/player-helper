@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         linux.do player helper
 // @namespace    http://tampermonkey.net/
-// @version      1.0.5
+// @version      1.0.6
 // @description  观影助手
 // @match        *://linux.do/*
 // @match        *://idcflare.com/*
@@ -1568,7 +1568,7 @@
         `).join('');
 
         const tabPanesHtml = tabOrder.map(tab => `
-            <div class="tab-pane" id="${tab.id}">
+            <div class="ph-tab-pane" id="${tab.id}">
                 ${TABS_CONFIG[tab.id]?.renderContent() || '<div>内容未定义</div>'}
             </div>
         `).join('');
@@ -1770,7 +1770,7 @@
                             </div>
                             <div class="settings-tab-content flex-1 overflow-hidden">
                                 <div class="settings-content-container h-full flex items-center justify-center">
-                                    <div class="settings-tab-pane active" id="api-settings">
+                                    <div class="settings-ph-tab-pane active" id="api-settings">
                                         <div class="settings-form-centered">
                                             <div class="form-row"><label class="form-label"><div class="custom-select-wrapper" id="douban-proxy-mode-wrapper"><div class="custom-select-trigger" tabindex="0"><span class="custom-select-value">豆瓣接口CDN</span></div><div class="custom-select-options"><div class="custom-select-option selected hover:!text-white" data-value="cdn"><svg class="option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span>豆瓣接口CDN</span></div><div class="custom-select-option hover:!text-white" data-value="proxy"><svg class="option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span>豆瓣API代理</span></div></div><input type="hidden" id="douban-proxy-mode" value="cdn"></div></label><input type="text" class="form-input text-input" data-key="${CONFIG.STORAGE_KEYS.DOUBAN_PROXY}" placeholder="CDN替换host，代理直接拼接" style="padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background-color: #f9fafb; color: #111827; outline: none;"></div>
                                             <div class="form-row"><label class="form-label"><div class="custom-select-wrapper" id="douban-image-mode-wrapper"><div class="custom-select-trigger" tabindex="0"><span class="custom-select-value">豆瓣图片CDN</span></div><div class="custom-select-options"><div class="custom-select-option selected hover:!text-white" data-value="cdn"><svg class="option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span>豆瓣图片CDN</span></div><div class="custom-select-option hover:!text-white" data-value="proxy"><svg class="option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span>豆瓣图片代理</span></div></div><input type="hidden" id="douban-image-mode" value="cdn"></div></label><input type="text" class="form-input text-input" data-key="${CONFIG.STORAGE_KEYS.DOUBAN_IMAGE_URL}" placeholder="CDN替换host，代理直接拼接" style="padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background-color: #f9fafb; color: #111827; outline: none;"></div>
@@ -1779,7 +1779,7 @@
                                             <div class="form-row logo-mode-row ${canEmbedHosts.includes(window.location.hostname) ? '' : 'hidden'}" style="justify-content: center;"><div class="logo-mode-switch"><span class="logo-mode-text-left">显示为页面右上角嵌合图标</span><label class="logo-mode-toggle"><input type="checkbox" id="logo-mode-toggle" data-key="${CONFIG.STORAGE_KEYS.SHOW_LOGO_INNER}"><span class="logo-mode-slider"></span></label><span class="logo-mode-text-right">显示为页面右上角悬浮按钮</span></div></div>
                                         </div>
                                     </div>
-                                    <div class="settings-tab-pane" id="tabs-settings">
+                                    <div class="settings-ph-tab-pane" id="tabs-settings">
                                         <div class="settings-form-centered">
                                             <div class="form-row"><label class="form-label">Tab位置</label><div class="custom-select-wrapper ph-select ph-select-fixed" id="tab-position-wrapper"><div class="custom-select-trigger" tabindex="0"><span class="custom-select-value">上方</span><svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div><div class="custom-select-options"><div class="custom-select-option selected hover:!text-white" data-value="top"><svg class="option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span>上方</span></div><div class="custom-select-option hover:!text-white" data-value="left"><svg class="option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span>左侧</span></div><div class="custom-select-option hover:!text-white" data-value="right"><svg class="option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span>右侧</span></div></div><input type="hidden" id="elegant-tab-position" value="top"></div></div>
                                             <div class="form-row"><label class="form-label">Tab顺序</label><div class="tab-order-container"><div id="tab-sort-list" class="tab-sort-list"></div><p class="tab-order-hint">拖拽项目可以调整Tab顺序</p></div></div>
@@ -2723,6 +2723,11 @@
     // =================================================================================
     function injectStyles() {
         const styles = `
+            *:not(.ph-tab-pane *),
+            *:not(.ph-tab-pane *)::before,
+            *:not(.ph-tab-pane *)::after {
+                box-sizing: unset;
+            }
             /* Core Animations */
             @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
             @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); } }
@@ -2759,8 +2764,8 @@
             .back-to-top { position: absolute; right: 15px; bottom: 24px; width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #65a0ff 0%, #ffffff 100%); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transition: all 0.3s ease; z-index: 10; }
             .back-to-top:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4); }
             .back-to-top.hidden { display: none; }
-            .tab-pane { display: none; }
-            .tab-pane.active { display: block; animation: fadeIn 0.3s ease; }
+            .ph-tab-pane { display: none; }
+            .ph-tab-pane.active { display: block; animation: fadeIn 0.3s ease; }
             /* Content Cards */
             .content-card { background: #f9fafb; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); }
             .dark .content-card { background: #1f2937; }
@@ -2968,8 +2973,8 @@
             .dark .settings-tab-button:hover:not(.active) { background: #374151; }
             .settings-tab-content { flex: 1; }
             .settings-content-container { padding: 0 20px; width: 100%; }
-            .settings-tab-pane { display: none; width: 100%; animation: fadeIn 0.3s ease; }
-            .settings-tab-pane.active { display: block; }
+            .settings-ph-tab-pane { display: none; width: 100%; animation: fadeIn 0.3s ease; }
+            .settings-ph-tab-pane.active { display: block; }
             .settings-form-centered { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 20px; margin: 0 auto; }
             .form-row { display: grid; grid-template-columns: 1fr 2fr; align-items: center; }
             .form-label { font-weight: 500 !important; text-align: right; padding-right: 16px; color: #374151; display: flex; justify-content: flex-end; align-items: center; }
