@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         linux.do player helper
 // @namespace    http://tampermonkey.net/
-// @version      1.0.3
+// @version      1.0.5
 // @description  观影助手
 // @match        *://linux.do/*
 // @match        *://idcflare.com/*
@@ -14,8 +14,8 @@
 // @require      https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js
 // @license      MIT
 // @run-at       document-end
-// @downloadURL https://update.greasyfork.org/scripts/562368/linuxdo%20player%20helper.user.js
-// @updateURL https://update.greasyfork.org/scripts/562368/linuxdo%20player%20helper.meta.js
+// @downloadURL  https://update.greasyfork.org/scripts/562368/linuxdo%20player%20helper.user.js
+// @updateURL    https://update.greasyfork.org/scripts/562368/linuxdo%20player%20helper.meta.js
 // ==/UserScript==
 
 (function () {
@@ -207,9 +207,14 @@
     // 豆瓣查找相关状态
     let doubanCurrentTab = 'anime'; // 当前豆瓣查找的tab
     let doubanCurrentCategory = 'series'; // 当前分类
-    let doubanCurrentPage = 1; // 当前页
     let doubanIsLoading = false; // 是否正在加载
-    let doubanHasMore = true; // 是否有更多数据
+    // 每个tab独立的分页状态
+    let doubanTabState = {
+        movie: { page: 1, hasMore: true },
+        tv: { page: 1, hasMore: true },
+        anime: { page: 1, hasMore: true },
+        variety: { page: 1, hasMore: true }
+    };
     // 数据加载状态缓存
     let dailyDataLoaded = false;
     let doubanDataLoaded = false;
@@ -381,7 +386,7 @@
             baseUrl = doubanProxy.replace(/\/+$/, '') + '/' + doubanApi;
         }
 
-        const page = tabType ? 1 : doubanCurrentPage;
+        const page = tabType ? 1 : doubanTabState[doubanCurrentTab].page;
         const start = (page - 1) * CONFIG.DOUBAN_PAGE_SIZE;
         const count = CONFIG.DOUBAN_PAGE_SIZE;
 
@@ -601,10 +606,11 @@
 
         doubanIsLoading = true;
         const $results = $(`#douban-results-${doubanCurrentTab}`);
+        const tabState = doubanTabState[doubanCurrentTab];
 
         if (reset) {
-            doubanCurrentPage = 1;
-            doubanHasMore = true;
+            tabState.page = 1;
+            tabState.hasMore = true;
             $results.html(`
                 <div class="douban-loading">
                     <div class="loading-spinner"></div>
@@ -658,9 +664,9 @@
                     $grid.append(renderDoubanItem(item));
                 });
 
-                doubanHasMore = true;
+                tabState.hasMore = true;
             } else {
-                doubanHasMore = false;
+                tabState.hasMore = false;
                 if (reset) {
                     $results.html('<div class="no-content">没有找到相关内容</div>');
                 }
@@ -669,8 +675,8 @@
             // 保存当前tab的状态（记录筛选配置）
             const filterValues = getCurrentFilterValues(doubanCurrentTab, doubanCurrentCategory);
             doubanTabCache[doubanCurrentTab] = {
-                hasMore: doubanHasMore,
-                page: doubanCurrentPage,
+                hasMore: tabState.hasMore,
+                page: tabState.page,
                 loaded: true,
                 isPreloaded: false,  // 不是预加载的数据
                 config: {
@@ -1598,8 +1604,8 @@
 
                 if (cache?.isPreloaded && isDefaultFilter(doubanCurrentTab, doubanCurrentCategory, filterValues)) {
                     $(`#douban-results-${doubanCurrentTab}`).html(cache.html);
-                    doubanHasMore = cache.hasMore;
-                    doubanCurrentPage = cache.page;
+                    doubanTabState[doubanCurrentTab].hasMore = cache.hasMore;
+                    doubanTabState[doubanCurrentTab].page = cache.page;
                     doubanDataLoaded = true;
                 } else {
                     loadDoubanData(true);
@@ -1945,8 +1951,8 @@
 
                     if (cachedData?.html && isDefaultFilter(doubanCurrentTab, doubanCurrentCategory, filterValues)) {
                         $(`#douban-results-${doubanCurrentTab}`).html(cachedData.html);
-                        doubanHasMore = cachedData.hasMore;
-                        doubanCurrentPage = cachedData.page || 1;
+                        doubanTabState[doubanCurrentTab].hasMore = cachedData.hasMore;
+                        doubanTabState[doubanCurrentTab].page = cachedData.page || 1;
                         doubanDataLoaded = true;
                     } else {
                         loadDoubanData(true);
@@ -2139,6 +2145,12 @@
             updateDoubanCategoryOptions();
             updateDoubanFilterOptions();
 
+            // 检查结果容器是否已有内容（之前加载过）
+            const $results = $(`#douban-results-${tab}`);
+            if ($results.find('.douban-grid').length > 0) {
+                return;
+            }
+
             // 从localStorage读取预加载的默认数据
             const cacheKeys = {
                 movie: CONFIG.STORAGE_KEYS.DOUBAN_CACHE_MOVIE,
@@ -2147,12 +2159,11 @@
                 variety: CONFIG.STORAGE_KEYS.DOUBAN_CACHE_VARIETY
             };
             const cachedData = getJsonSetting(cacheKeys[tab], null);
-            const $results = $(`#douban-results-${tab}`);
 
             if (cachedData?.html) {
                 $results.html(cachedData.html);
-                doubanHasMore = cachedData.hasMore;
-                doubanCurrentPage = cachedData.page || 1;
+                doubanTabState[tab].hasMore = cachedData.hasMore !== false;
+                doubanTabState[tab].page = cachedData.page || 1;
             } else {
                 loadDoubanData(true);
             }
@@ -2231,11 +2242,15 @@
             // 显示/隐藏返回顶部按钮
             $backToTop.toggleClass('hidden', this.scrollTop < 300);
 
-            // 豆瓣查找滚动加载（如果存在加载更多按钮则不自动触发）
-            if (currentActiveTabId !== 'tab2' || doubanIsLoading || !doubanHasMore) return;
-            if ($('.douban-load-more-btn').length > 0) return;
+            // 豆瓣查找滚动加载
+            if (currentActiveTabId !== 'tab2' || doubanIsLoading) return;
+            const tabState = doubanTabState[doubanCurrentTab];
+            if (!tabState.hasMore) return;
+            // 只检查当前激活tab的加载更多按钮
+            if ($(`#douban-results-${doubanCurrentTab} .douban-load-more-btn`).length > 0) return;
+
             if (this.scrollTop + this.clientHeight >= this.scrollHeight - 150) {
-                doubanCurrentPage++;
+                tabState.page++;
                 loadDoubanData(false);
             }
         });
@@ -2250,7 +2265,7 @@
 
             // 如果已有数据，则翻页加载更多；如果没有数据（重试失败请求），不增加页码
             if (hasExistingData) {
-                doubanCurrentPage++;
+                doubanTabState[doubanCurrentTab].page++;
             }
 
             loadDoubanData(false);
@@ -2616,8 +2631,10 @@
         // 如果豆瓣代理URL发生变化，重置豆瓣状态并重新加载
         if (doubanProxyChanged) {
             doubanDataLoaded = false;
-            doubanHasMore = true;
-            doubanCurrentPage = 1;
+            // 重置所有tab的分页状态
+            Object.keys(doubanTabState).forEach(tab => {
+                doubanTabState[tab] = { page: 1, hasMore: true };
+            });
             doubanTabCache = {};
             // 清除豆瓣缓存
             localStorage.removeItem(CONFIG.STORAGE_KEYS.DOUBAN_CACHE_MOVIE);
@@ -3522,13 +3539,10 @@
             }
             .douban-results-wrapper {
                 flex: 1;
-                overflow: hidden;
-                position: relative;
+                min-height: 0;
             }
             .douban-results {
                 display: none;
-                height: 100%;
-                overflow-y: auto;
             }
             .douban-results.active {
                 display: block;
